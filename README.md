@@ -38,7 +38,7 @@ The `install.sh` script will handle all the initial setup for you automatically.
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/tudeorangbiasa/gnomeChangeWallpaper.git
+git clone https://github.com/tudeorangbiasa/GnomeChangeWallpaper.git
 cd GnomeChangeWallpaper/
 ```
 
