@@ -1,68 +1,69 @@
 #!/bin/bash
 
-# --- Configuration ---
-# Define your wallpaper directory
-WALLPAPER_DIR="$HOME/Wallpapers"
+###############################################################################
+# GNOME Wallpaper Changer Script
+#
+# Randomly selects an image from a specified directory and sets it as the
+# GNOME desktop wallpaper. Optionally sends desktop notifications.
+#
+# Usage:
+#   - Configure WALLPAPER_DIR to point to your wallpapers folder.
+#   - Optionally enable notifications.
+###############################################################################
 
-# Wallpaper display options: "zoom", "stretched", "scaled", "wallpaper", "center"
-PICTURE_OPTIONS="zoom"
+# --- User Configuration ---
 
-# Enable or disable desktop notifications: "true" or "false"
-# Set to "true" to show notifications, "false" to hide them.
-ENABLE_NOTIFICATIONS="false" 
+WALLPAPER_DIR="$HOME/Wallpapers"      # Directory containing wallpaper images
+PICTURE_OPTIONS="zoom"                # GNOME wallpaper display mode
+ENABLE_NOTIFICATIONS="false"          # "true" to enable desktop notifications
 
-# --- Main Functions ---
+# --- Utility Functions ---
 
-# Function to display a desktop notification (if enabled)
+# Sends a desktop notification if enabled
 send_notification() {
-    if [ "$ENABLE_NOTIFICATIONS" = "true" ]; then
+    if [[ "$ENABLE_NOTIFICATIONS" == "true" ]]; then
         notify-send "$1" "$2"
     fi
 }
 
-# Function to display an error message and exit
-# It prints to stderr and sends a desktop notification (if enabled).
+# Prints error to stderr, sends notification, and exits
 show_error_and_exit() {
-    echo "Error: $1" >&2 # Send output to stderr
+    echo "Error: $1" >&2
     send_notification "Wallpaper Script Error" "$1"
     exit 1
 }
 
-# --- Script Execution ---
+# --- Main Script ---
 
-# 1. Ensure the wallpaper directory exists.
-# If the directory is not found, an error message is displayed, and the script exits.
-if [ ! -d "$WALLPAPER_DIR" ]; then
-    show_error_and_exit "Wallpaper directory '$WALLPAPER_DIR' not found. Please create or adjust the directory path."
+# 1. Verify wallpaper directory exists
+if [[ ! -d "$WALLPAPER_DIR" ]]; then
+    show_error_and_exit "Wallpaper directory '$WALLPAPER_DIR' not found. Please create it or update the path."
 fi
 
-# 2. Get a random image file from the directory.
-# This command finds all files, then filters for common image extensions (case-insensitive),
-# and finally picks one randomly using 'shuf -n 1'.
-NEW_WALLPAPER=$(find "$WALLPAPER_DIR" -type f | grep -iE '\.(jpg|png|jpeg)$' | shuf -n 1)
+# 2. Select a random image file (jpg, jpeg, png)
+NEW_WALLPAPER=$(find "$WALLPAPER_DIR" -type f -iregex '.*\.\(jpg\|jpeg\|png\)$' | shuf -n 1)
 
-# 3. Check if a wallpaper was successfully found.
-# If no images are found, an error message is displayed, and the script exits.
-if [ -z "$NEW_WALLPAPER" ]; then
-    show_error_and_exit "No wallpapers found in '$WALLPAPER_DIR'. Please add some images (jpg, png, jpeg)."
+# 3. Ensure an image was found
+if [[ -z "$NEW_WALLPAPER" ]]; then
+    show_error_and_exit "No image files found in '$WALLPAPER_DIR'. Please add jpg, jpeg, or png files."
 fi
 
-# 4. Set the new wallpaper using gsettings for GNOME desktop.
-# The 'file://' prefix is crucial for picture URIs.
-# Each 'gsettings' command is followed by '|| show_error_and_exit' to catch potential failures
-# and provide immediate feedback via notification.
-gsettings set org.gnome.desktop.background picture-uri "file://$NEW_WALLPAPER" \
-    || show_error_and_exit "Failed to set primary wallpaper URI."
+# 4. Set wallpaper using GNOME gsettings
+if ! gsettings set org.gnome.desktop.background picture-uri "file://$NEW_WALLPAPER"; then
+    show_error_and_exit "Failed to set primary wallpaper URI."
+fi
 
-gsettings set org.gnome.desktop.background picture-uri-dark "file://$NEW_WALLPAPER" \
-    || show_error_and_exit "Failed to set dark theme wallpaper URI."
+if ! gsettings set org.gnome.desktop.background picture-uri-dark "file://$NEW_WALLPAPER"; then
+    show_error_and_exit "Failed to set dark theme wallpaper URI."
+fi
 
-gsettings set org.gnome.desktop.background picture-options "$PICTURE_OPTIONS" \
-    || show_error_and_exit "Failed to set picture options."
+if ! gsettings set org.gnome.desktop.background picture-options "$PICTURE_OPTIONS"; then
+    show_error_and_exit "Failed to set wallpaper display options."
+fi
 
-# 5. Notify the user of a successful wallpaper change (if notifications are enabled).
-# Displays a desktop notification showing the name of the new wallpaper.
-send_notification "Wallpaper Changed Successfully" "New wallpaper: $(basename "$NEW_WALLPAPER")"
+# 5. Notify user of success
+send_notification "Wallpaper Changed" "New wallpaper: $(basename "$NEW_WALLPAPER")"
+# Optional: Uncomment the line below for console output
+#echo "Wallpaper changed to: $NEW_WALLPAPER"
 
-# Exit with a success status code.
 exit 0
